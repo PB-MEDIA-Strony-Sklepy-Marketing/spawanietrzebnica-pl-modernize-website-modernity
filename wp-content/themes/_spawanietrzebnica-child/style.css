@@ -1,0 +1,21 @@
+/*
+Theme Name: Welderpro Child
+Theme URI: http://wp.zozotheme.com/wp-welderpro/
+Author: Deepak Chandra
+Author URI: http://themeforest.net/user/wrapwp
+Description: A child theme of WelderPro Theme.  
+Version: 1.0.0
+Template:     spawanietrzebnica
+License URI: http://themeforest.net/licenses
+Text Domain: welderpro-child
+
+This theme, like WordPress, is licensed under the GPL.
+Use it to make something cool, have fun, and share what you've learned with others.
+*/
+
+/* Add your custom CSS rules that overwrite the ones in the main Lens theme here */
+
+/* This file assumes you wish to add new CSS rules that will overwrite the ones in the parent's CSS files
+If you wish however, you can copy the whole style.css file from the parent here and hack at it - see functions.php for more details.
+In that case please remember that you still need to retain the header above (replace the header of the parent style.css with the one above),
+specifically the 'Template: rosa' line. */
