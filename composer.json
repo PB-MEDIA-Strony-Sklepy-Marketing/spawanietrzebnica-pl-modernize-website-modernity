@@ -1,0 +1,81 @@
+{
+  "name": "pb-media/spawanie-trzebnica-theme",
+  "description": "WordPress theme dla spawanietrzebnica.pl",
+  "type": "wordpress-theme",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "PB MEDIA",
+      "email": "kontakt@pb-media.pl",
+      "homepage": "https://pb-media.pl"
+    }
+  ],
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=8.0",
+    "composer/installers": "^2.2"
+  },
+  "require-dev": {
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "wp-coding-standards/wpcs": "^3.0",
+    "phpcompatibility/php-compatibility": "^9.3",
+    "phpunit/phpunit": "^9.6",
+    "yoast/phpunit-polyfills": "^2.0",
+    "brain/monkey": "^2.6",
+    "mockery/mockery": "^1.6",
+    "symfony/var-dumper": "^6.3",
+    "phpstan/phpstan": "^1.10",
+    "szepeviktor/phpstan-wordpress": "^1.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "SpawanieTrzebnica\\Theme\\": "wp-content/themes/spawanie-trzebnica/inc/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "SpawanieTrzebnica\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "lint": [
+      "@php ./vendor/bin/phpcs"
+    ],
+    "fix": [
+      "@php ./vendor/bin/phpcbf"
+    ],
+    "test": [
+      "@php ./vendor/bin/phpunit"
+    ],
+    "test:coverage": [
+      "@php ./vendor/bin/phpunit --coverage-html coverage"
+    ],
+    "analyze": [
+      "@php ./vendor/bin/phpstan analyze"
+    ],
+    "post-install-cmd": [
+      "[ -f vendor/bin/phpcs ] && vendor/bin/phpcs --config-set installed_paths vendor/wp-coding-standards/wpcs,vendor/phpcompatibility/php-compatibility || true"
+    ],
+    "post-update-cmd": [
+      "[ -f vendor/bin/phpcs ] && vendor/bin/phpcs --config-set installed_paths vendor/wp-coding-standards/wpcs,vendor/phpcompatibility/php-compatibility || true"
+    ]
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "composer/installers": true
+    },
+    "optimize-autoloader": true,
+    "sort-packages": true,
+    "platform": {
+      "php": "8.0"
+    }
+  },
+  "extra": {
+    "installer-paths": {
+      "wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+      "wp-content/themes/{$name}/": ["type:wordpress-theme"]
+    }
+  }
+}

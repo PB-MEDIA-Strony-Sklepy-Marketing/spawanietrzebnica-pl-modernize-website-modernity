@@ -1,0 +1,285 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  release:
+    types: [published]
+
+env:
+  PHP_VERSION: '8.0'
+  NODE_VERSION: '18'
+  WORDPRESS_VERSION: 'latest'
+
+jobs:
+  # 1. Analiza kodu i linting
+  code-quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer, cs2pr
+          coverage: none
+      
+      - name: 📦 Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+      
+      - name: 📦 Install PHP dependencies
+        run: composer install --no-progress --prefer-dist
+      
+      - name: 🔍 Run PHPCS (WordPress standards)
+        run: |
+          vendor/bin/phpcs --report=checkstyle | cs2pr
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📦 Install Node dependencies
+        run: npm ci
+      
+      - name: 🔍 Lint JavaScript
+        run: npm run lint:js
+      
+      - name: 🔍 Lint CSS/SCSS
+        run: npm run lint:css
+
+  # 2. Testy jednostkowe PHP
+  php-tests:
+    name: 🧪 PHP Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup PHP with extensions
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, mysql
+          tools: composer, wp-cli
+          coverage: xdebug
+      
+      - name: 📦 Install Composer dependencies
+        run: composer install --no-progress --prefer-dist
+      
+      - name: 🔧 Setup WordPress test suite
+        run: |
+          bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ env.WORDPRESS_VERSION }}
+      
+      - name: 🧪 Run PHPUnit tests
+        run: vendor/bin/phpunit --coverage-clover coverage.xml
+      
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # 3. Build assetów
+  build-assets:
+    name: 🏗️ Build Assets
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci
+      
+      - name: 🏗️ Build production assets
+        run: npm run build
+      
+      - name: 📊 Analyze bundle size
+        run: npm run analyze
+      
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: built-assets
+          path: |
+            wp-content/themes/spawanie-trzebnica/assets/dist/
+            wp-content/themes/spawanie-trzebnica/assets/css/
+            wp-content/themes/spawanie-trzebnica/assets/js/
+          retention-days: 7
+
+  # 4. Testy PageSpeed
+  performance-test:
+    name: 📊 Performance Tests
+    runs-on: ubuntu-latest
+    needs: build-assets
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📥 Download built assets
+        uses: actions/download-artifact@v3
+        with:
+          name: built-assets
+          path: wp-content/themes/spawanie-trzebnica/assets/
+      
+      - name: 🌐 Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            https://staging.spawanietrzebnica.pl/
+          budgetPath: ./lighthouse-budget.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  # 5. Security scan
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔒 Run WordPress security scan
+        uses: umutphp/wp-vulnerability-check-action@v1
+        with:
+          scan_path: './wp-content'
+          exclude_paths: 'node_modules,vendor'
+      
+      - name: 🔍 PHP Security Checker
+        uses: symfonycorp/security-checker-action@v4
+
+  # 6. Deploy to staging
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [php-tests, build-assets, security-scan]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.spawanietrzebnica.pl
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📥 Download built assets
+        uses: actions/download-artifact@v3
+        with:
+          name: built-assets
+          path: wp-content/themes/spawanie-trzebnica/assets/
+      
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /var/www/staging.spawanietrzebnica.pl
+            git pull origin develop
+            composer install --no-dev --optimize-autoloader
+            npm ci --production
+            npm run build
+            wp cache flush
+            wp rewrite flush
+
+  # 7. Deploy to production
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [php-tests, build-assets, security-scan]
+    if: github.event_name == 'release'
+    environment:
+      name: production
+      url: https://spawanietrzebnica.pl
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📥 Download built assets
+        uses: actions/download-artifact@v3
+        with:
+          name: built-assets
+          path: wp-content/themes/spawanie-trzebnica/assets/
+      
+      - name: 🔧 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer, wp-cli
+      
+      - name: 📦 Prepare production package
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci --production
+          npm run build:production
+          rm -rf node_modules .git tests .github
+      
+      - name: 🚀 Deploy to production server
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          source: "./"
+          target: "/var/www/spawanietrzebnica.pl/wp-content/themes/spawanie-trzebnica-new"
+      
+      - name: 🔄 Activate new theme
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /var/www/spawanietrzebnica.pl
+            wp maintenance-mode activate
+            mv wp-content/themes/spawanie-trzebnica wp-content/themes/spawanie-trzebnica-backup-$(date +%Y%m%d%H%M%S)
+            mv wp-content/themes/spawanie-trzebnica-new wp-content/themes/spawanie-trzebnica
+            wp theme activate spawanie-trzebnica
+            wp cache flush
+            wp rewrite flush
+            wp maintenance-mode deactivate
+      
+      - name: 📧 Send deployment notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: '🚀 Deployment do produkcji zakończony!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()

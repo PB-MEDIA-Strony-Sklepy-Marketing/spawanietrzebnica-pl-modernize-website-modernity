@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # WordPress
+  wordpress:
+    image: wordpress:6-php8.0-apache
+    container_name: spawanie-trzebnica-wp
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ${DB_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-wordpress}
+      WORDPRESS_DB_NAME: ${DB_NAME:-spawanie_trzebnica}
+      WORDPRESS_DEBUG: ${WP_DEBUG:-true}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_HOME', 'http://localhost:8080');
+        define('WP_SITEURL', 'http://localhost:8080');
+        define('FS_METHOD', 'direct');
+        define('SCRIPT_DEBUG', true);
+        define('WP_DEBUG_LOG', true);
+        define('WP_DEBUG_DISPLAY', false);
+    volumes:
+      - ./wp-content:/var/www/html/wp-content
+      - wordpress_data:/var/www/html
+    depends_on:
+      - db
+    networks:
+      - spawanie-network
+
+  # MySQL
+  db:
+    image: mysql:5.7
+    container_name: spawanie-trzebnica-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-spawanie_trzebnica}
+      MYSQL_USER: ${DB_USER:-wordpress}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wordpress}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - spawanie-network
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: spawanie-trzebnica-pma
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    depends_on:
+      - db
+    networks:
+      - spawanie-network
+
+  # Node.js dla buildowania assetów
+  node:
+    image: node:18-alpine
+    container_name: spawanie-trzebnica-node
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "npm install && npm run watch"
+    networks:
+      - spawanie-network
+
+  # WP-CLI
+  wpcli:
+    image: wordpress:cli-php8.0
+    container_name: spawanie-trzebnica-cli
+    user: "33:33"
+    volumes:
+      - ./wp-content:/var/www/html/wp-content
+      - wordpress_data:/var/www/html
+    depends_on:
+      - wordpress
+      - db
+    networks:
+      - spawanie-network
+    entrypoint: wp
+    command: --info
+
+  # Mailhog dla testowania emaili
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: spawanie-trzebnica-mail
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - spawanie-network
+
+volumes:
+  wordpress_data:
+  db_data:
+
+networks:
+  spawanie-network:
+    driver: bridge

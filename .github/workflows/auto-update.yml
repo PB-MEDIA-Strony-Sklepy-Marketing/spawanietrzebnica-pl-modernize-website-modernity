@@ -1,0 +1,60 @@
+name: Auto Update Dependencies
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Każdy poniedziałek o 3:00
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    name: 🔄 Update Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🔧 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          tools: composer
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: 📦 Update Composer dependencies
+        run: |
+          composer update --no-interaction
+          composer outdated --direct
+      
+      - name: 📦 Update npm dependencies
+        run: |
+          npm update
+          npm outdated || true
+      
+      - name: 🧪 Run tests
+        run: |
+          npm run test
+          vendor/bin/phpunit
+      
+      - name: 📝 Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: Aktualizacja zależności [automated]'
+          title: '🔄 Automatyczna aktualizacja zależności'
+          body: |
+            ## 📦 Automatyczna aktualizacja zależności
+            
+            Ten PR zawiera aktualizacje:
+            - Zależności Composer (PHP)
+            - Zależności npm (Node.js)
+            
+            Proszę sprawdzić zmiany i przetestować przed merge.
+          branch: auto-update/dependencies
+          delete-branch: true
