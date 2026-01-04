@@ -1,0 +1,17 @@
+img.wpsol-lazy-hidden {
+    filter: blur(50px);
+    -webkit-filter: blur(50px);
+    -moz-filter: blur(50px);
+    -o-filter: blur(50px);
+    -ms-filter: blur(50px);
+    clip-path: inset(0px 0px 0px 0px);
+}
+img.wpsol-lazy-loaded {
+    animation: image_blur 0.5s;
+}
+
+
+@-webkit-keyframes image_blur {
+    0% { -webkit-filter: blur(50px);}
+    100% { -webkit-filter: blur(0px);}
+}

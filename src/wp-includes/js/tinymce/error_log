@@ -1,0 +1,4 @@
+[11-Apr-2025 07:45:14 UTC] PHP Deprecated:  Creation of dynamic property wfPOMO_FileReader::$is_overloaded is deprecated in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-content/plugins/wordfence/waf/pomo/streams.php on line 21
+[11-Apr-2025 07:45:14 UTC] PHP Deprecated:  Creation of dynamic property wfPOMO_FileReader::$_pos is deprecated in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-content/plugins/wordfence/waf/pomo/streams.php on line 22
+[11-Apr-2025 07:45:14 UTC] PHP Deprecated:  Creation of dynamic property wfPOMO_FileReader::$_f is deprecated in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-content/plugins/wordfence/waf/pomo/streams.php on line 141
+[11-Apr-2025 07:45:14 UTC] PHP Deprecated:  strlen(): Passing null to parameter #1 ($string) of type string is deprecated in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-content/plugins/wordfence/vendor/wordfence/wf-waf/src/lib/utils.php on line 445

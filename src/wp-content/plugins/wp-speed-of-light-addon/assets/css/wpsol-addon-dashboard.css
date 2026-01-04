@@ -1,0 +1,9 @@
+.wpsol-dashboard .panel-addon {
+    border: 1px solid #49BF87;
+    color: #fafafa;
+    background-color: #49BF87;
+}
+
+.wpsol-dashboard .panel-addon a {
+    color: #fafafa;
+}

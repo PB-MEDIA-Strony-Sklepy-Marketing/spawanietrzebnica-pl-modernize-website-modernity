@@ -1,0 +1,12 @@
+[14-Apr-2025 17:42:06 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function is_main_site() in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-includes/update.php:878
+Stack trace:
+#0 {main}
+  thrown in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-includes/update.php on line 878
+[01-May-2025 02:19:43 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function is_main_site() in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-includes/update.php:878
+Stack trace:
+#0 {main}
+  thrown in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-includes/update.php on line 878
+[02-Jan-2026 02:49:04 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function _deprecated_file() in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-includes/rss.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/pbmediao/public_html/spawanietrzebnica.pl/wp-includes/rss.php on line 19
